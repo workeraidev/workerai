@@ -1,49 +1,59 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "workerai",
-	"main": "./src/worker/index.ts",
-	"compatibility_date": "2025-04-01",
-	"compatibility_flags": ["nodejs_compat"],
-	"observability": {
-		"enabled": true
-	},
-	"ai": {
-		"binding": "AI"
-	},
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "workerai",
+  "main": "./src/worker/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "ai": {
+    "binding": "AI"
+  },
   "analytics_engine_datasets": [
-    { "binding": "AISTUDIO", "dataset": "AISTUDIO" }
+    {
+      "binding": "AISTUDIO",
+      "dataset": "AISTUDIO"
+    }
   ],
-	"kv_namespaces": [
-		{
-			"binding": "MY_KV",
-			"id": "3949af7168fd4640b667da4aee56c1b6",
-			"preview_id": "3949af7168fd4640b667da4aee56c1b6"
-		}
-	],
-	"r2_buckets": [
-		{
-			"binding": "MY_BUCKET",
-			"bucket_name": "studioai",
-			"preview_bucket_name": "studioai"
-		}
-	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"name": "MY_DURABLE_OBJECT",
-				"class_name": "YourDurableObjectClass"
-			}
-		]
-	},
-	"migrations": [
-		{
-			"tag": "v1",
-			"new_sqlite_classes": ["YourDurableObjectClass"]
-		}
-	],
-	"upload_source_maps": true,
-	"assets": {
-		"directory": "./dist/client",
-		"not_found_handling": "single-page-application"
-	}
+  "kv_namespaces": [
+    {
+      "binding": "MY_KV",
+      "id": "3949af7168fd4640b667da4aee56c1b6",
+      "preview_id": "3949af7168fd4640b667da4aee56c1b6"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MY_BUCKET",
+      "bucket_name": "studioai",
+      "preview_bucket_name": "studioai"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MY_DURABLE_OBJECT",
+        "class_name": "YourDurableObjectClass"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["YourDurableObjectClass"]
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "studioai",
+      "database_id": "b8f7a79f-71a1-412d-a79e-00f3a7a40dac"
+    }
+  ],
+  "upload_source_maps": true,
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application"
+  }
 }
