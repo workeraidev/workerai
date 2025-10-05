@@ -4,21 +4,26 @@
   "main": "./src/worker/index.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
+
   "observability": {
     "enabled": true
   },
+
   "ai": {
     "binding": "AI"
   },
+
   "browser": {
     "binding": "MYBROWSER"
   },
+
   "analytics_engine_datasets": [
     {
       "binding": "AISTUDIO",
       "dataset": "AISTUDIO"
     }
   ],
+
   "kv_namespaces": [
     {
       "binding": "MY_KV",
@@ -26,6 +31,7 @@
       "preview_id": "3949af7168fd4640b667da4aee56c1b6"
     }
   ],
+
   "r2_buckets": [
     {
       "binding": "MY_BUCKET",
@@ -33,20 +39,25 @@
       "preview_bucket_name": "studioai"
     }
   ],
+
   "durable_objects": {
     "bindings": [
       {
-        "name": "DURABLE_OBJECT",
-        "class_name": "DurableObject"
+        "name": "MY_DURABLE_OBJECT",
+        "class_name": "MyDurableObject"
       }
     ]
   },
+
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["DurableObject"]
+      "new_sqlite_classes": [
+        "MyDurableObject"
+      ]
     }
   ],
+
   "d1_databases": [
     {
       "binding": "DB",
@@ -54,7 +65,9 @@
       "database_id": "b8f7a79f-71a1-412d-a79e-00f3a7a40dac"
     }
   ],
+
   "upload_source_maps": true,
+
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "single-page-application"
