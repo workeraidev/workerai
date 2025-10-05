@@ -19,14 +19,14 @@
 
   "analytics_engine_datasets": [
     {
-      "binding": "AISTUDIO",
-      "dataset": "AISTUDIO"
+      "binding": "ANALYTICS",
+      "dataset": "ANALYTICS"
     }
   ],
 
   "kv_namespaces": [
     {
-      "binding": "MY_KV",
+      "binding": "CHAT_SESSIONS",
       "id": "3949af7168fd4640b667da4aee56c1b6",
       "preview_id": "3949af7168fd4640b667da4aee56c1b6"
     }
@@ -34,7 +34,7 @@
 
   "r2_buckets": [
     {
-      "binding": "MY_BUCKET",
+      "binding": "FILE_STORAGE",
       "bucket_name": "studioai",
       "preview_bucket_name": "studioai"
     }
@@ -43,8 +43,8 @@
   "durable_objects": {
     "bindings": [
       {
-        "name": "MY_DURABLE_OBJECT",
-        "class_name": "MyDurableObject"
+        "name": "CHAT_DO",
+        "class_name": "ChatDurableObject"
       }
     ]
   },
@@ -53,14 +53,14 @@
     {
       "tag": "v1",
       "new_sqlite_classes": [
-        "MyDurableObject"
+        "ChatDurableObject"
       ]
     }
   ],
 
   "d1_databases": [
     {
-      "binding": "DB",
+      "binding": "AI_CHAT_DB",
       "database_name": "studioai",
       "database_id": "b8f7a79f-71a1-412d-a79e-00f3a7a40dac"
     }
