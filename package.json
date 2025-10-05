@@ -88,13 +88,15 @@
 		"wrangler": "^4.42.0"
 	},
 	"scripts": {
-		"build": "tsc -b && vite build",
-		"cf-typegen": "wrangler types",
-		"check": "tsc && vite build && wrangler deploy --dry-run",
-		"deploy": "wrangler deploy",
-		"dev": "vite",
-		"lint": "eslint .",
-		"preview": "npm run build && vite preview"
+	"build": "tsc -b && vite build",
+	"cf-typegen": "wrangler types",
+	"check": "tsc && vite build && wrangler deploy --dry-run",
+	"deploy": "wrangler deploy",
+	"predeploy": "wrangler d1 migrations apply DB --remote",
+	"dev": "pnpm seedLocalD1 && wrangler dev",
+	"seedLocalD1": "wrangler d1 migrations apply DB --local",
+	"lint": "eslint .",
+	"preview": "npm run build && vite preview"
 	},
 	"type": "module"
 }
