@@ -25,6 +25,59 @@
 	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
 	 */
 	/**
+	 * Workers AI Binding
+	 * https://developers.cloudflare.com/workers-ai/
+	 */
+	"ai": {
+		"binding": "AI"
+	},
+	/**
+	 * KV Namespaces
+	 * https://developers.cloudflare.com/kv/
+	 */
+	"kv_namespaces": [
+		{
+			"binding": "MY_KV",
+			"id": "your-kv-namespace-id",
+			"preview_id": "your-preview-kv-namespace-id"
+		}
+	],
+	/**
+	 * R2 Buckets
+	 * https://developers.cloudflare.com/r2/
+	 */
+	"r2_buckets": [
+		{
+			"binding": "MY_BUCKET",
+			"bucket_name": "your-bucket-name",
+			"preview_bucket_name": "your-preview-bucket-name"
+		}
+	],
+	/**
+	 * Durable Objects
+	 * https://developers.cloudflare.com/durable-objects/
+	 */
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MY_DURABLE_OBJECT",
+				"class_name": "YourDurableObjectClass"
+			}
+		]
+	},
+	/**
+	 * Durable Objects Migrations
+	 * https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/
+	 */
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"YourDurableObjectClass"
+			]
+		}
+	],
+	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
