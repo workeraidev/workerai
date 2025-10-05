@@ -36,15 +36,15 @@
   "durable_objects": {
     "bindings": [
       {
-        "name": "MY_DURABLE_OBJECT",
-        "class_name": "YourDurableObjectClass"
+        "name": "DURABLE_OBJECT",
+        "class_name": "DurableObject"
       }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["YourDurableObjectClass"]
+      "new_sqlite_classes": ["DurableObject"]
     }
   ],
   "d1_databases": [
