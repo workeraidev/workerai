@@ -93,12 +93,12 @@
 	},
 	"scripts": {
 	"build": "vite build",
-	"generate-types": "pnpm generate-types",
-	"cf-typegen": "pnpm cf-typegen",
+	"check": "tsc && wrangler deploy --dry-run",
+	"cf-typegen": "wrangler types",
 	"deploy": "wrangler deploy",
-	"predeploy": "wrangler d1 migrations apply DB --remote",
-	"dev": "pnpm seedLocalD1",
-	"seedLocalD1": "wrangler d1 migrations apply DB --local",
+	"dev": "pnpm seedLocalD1 && wrangler dev",
+    "predeploy": "wrangler d1 migrations apply DB --remote",
+    "seedLocalD1": "wrangler d1 migrations apply DB --local",
 	"lint": "eslint .",
 	"preview": "npm run build && vite preview"
 	},
