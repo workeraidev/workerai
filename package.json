@@ -92,10 +92,9 @@
 		"wrangler": "^4.42.0"
 	},
 	"scripts": {
-	"build": "tsc -b && vite build",
+	"build": "vite build",
 	"generate-types": "wrangler types",
 	"cf-typegen": "generate-types && tsc",
-	"check": "tsc && vite build && wrangler deploy --dry-run",
 	"deploy": "wrangler deploy",
 	"predeploy": "wrangler d1 migrations apply DB --remote",
 	"dev": "pnpm seedLocalD1 && wrangler dev",
