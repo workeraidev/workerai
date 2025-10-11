@@ -97,8 +97,8 @@
 	"cf-typegen": "wrangler types",
 	"deploy": "wrangler deploy",
 	"dev": "wrangler dev",
-    "db:migrate": "wrangler d1 migrations apply DB --remote",
-    "db:push": "wrangler d1 migrations apply DB --local",
+    "db:migrate": "wrangler d1 migrations apply studioai --remote",
+    "db:push": "wrangler d1 migrations apply studioai --local",
 	"lint": "eslint .",
 	"preview": "npm run build && vite preview"
 	},
