@@ -1,0 +1,82 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a8edea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fed6e3;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="400" rx="50" fill="url(#bgGrad)"/>
+  
+  <!-- Main chat bubble -->
+  <g filter="url(#glow)">
+    <path d="M 200 80 C 130 80 75 125 75 180 C 75 210 90 237 115 255 L 105 290 L 145 270 C 160 275 180 280 200 280 C 270 280 325 235 325 180 C 325 125 270 80 200 80 Z" 
+          fill="white" opacity="0.95"/>
+  </g>
+  
+  <!-- AI Brain circuits inside bubble -->
+  <g opacity="0.7">
+    <!-- Central node -->
+    <circle cx="200" cy="180" r="15" fill="#667eea" opacity="0.8"/>
+    
+    <!-- Connection lines -->
+    <line x1="200" y1="180" x2="160" y2="150" stroke="#764ba2" stroke-width="2" opacity="0.6"/>
+    <line x1="200" y1="180" x2="240" y2="150" stroke="#764ba2" stroke-width="2" opacity="0.6"/>
+    <line x1="200" y1="180" x2="160" y2="210" stroke="#764ba2" stroke-width="2" opacity="0.6"/>
+    <line x1="200" y1="180" x2="240" y2="210" stroke="#764ba2" stroke-width="2" opacity="0.6"/>
+    
+    <!-- Outer nodes -->
+    <circle cx="160" cy="150" r="8" fill="#a8edea"/>
+    <circle cx="240" cy="150" r="8" fill="#a8edea"/>
+    <circle cx="160" cy="210" r="8" fill="#fed6e3"/>
+    <circle cx="240" cy="210" r="8" fill="#fed6e3"/>
+  </g>
+  
+  <!-- Sparkle effects -->
+  <g opacity="0.8">
+    <path d="M 280 100 L 285 110 L 295 115 L 285 120 L 280 130 L 275 120 L 265 115 L 275 110 Z" 
+          fill="#ffffff"/>
+    <path d="M 120 240 L 123 246 L 129 249 L 123 252 L 120 258 L 117 252 L 111 249 L 117 246 Z" 
+          fill="#ffffff"/>
+    <path d="M 310 220 L 313 226 L 319 229 L 313 232 L 310 238 L 307 232 L 301 229 L 307 226 Z" 
+          fill="#ffffff"/>
+  </g>
+  
+  <!-- AI Text -->
+  <text x="200" y="190" font-family="Arial, sans-serif" font-size="32" font-weight="bold" 
+        fill="#667eea" text-anchor="middle">AI</text>
+  
+  <!-- Bottom section -->
+  <rect x="50" y="310" width="300" height="60" rx="15" fill="white" opacity="0.2"/>
+  
+  <!-- Powered by text -->
+  <text x="200" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="600" 
+        fill="#ffffff" text-anchor="middle">Powered by</text>
+  
+  <!-- Telegram link -->
+  <a href="https://t.me/drkingbd" target="_blank">
+    <text x="200" y="355" font-family="Arial, sans-serif" font-size="16" font-weight="bold" 
+          fill="#ffffff" text-anchor="middle" style="cursor:pointer;">
+      t.me/drkingbd
+    </text>
+  </a>
+  
+  <!-- Small Telegram icon -->
+  <g transform="translate(90, 340)">
+    <circle cx="0" cy="0" r="8" fill="#ffffff" opacity="0.9"/>
+    <path d="M -4 -1 L 2 -1 L 0 3 Z" fill="#667eea"/>
+    <path d="M -4 -3 L 4 -3 L 2 -1 L -4 -1 Z" fill="#667eea"/>
+  </g>
+</svg>
