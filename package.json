@@ -93,6 +93,7 @@
 	},
 	"scripts": {
 	"build": "tsc -b && vite build",
+	"generate-types": "wrangler types",
 	"cf-typegen": "wrangler types",
 	"check": "tsc && vite build && wrangler deploy --dry-run",
 	"deploy": "wrangler deploy",
