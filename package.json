@@ -94,7 +94,7 @@
 	"scripts": {
 	"build": "tsc -b && vite build",
 	"generate-types": "wrangler types",
-	"cf-typegen": "wrangler types",
+	"cf-typegen": "generate-types && tsc",
 	"check": "tsc && vite build && wrangler deploy --dry-run",
 	"deploy": "wrangler deploy",
 	"predeploy": "wrangler d1 migrations apply DB --remote",
