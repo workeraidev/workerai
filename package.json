@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",
+		"@types/node": "^24.6.2",
 		"@cloudflare/puppeteer": "latest",
 		"@cloudflare/ai-utils": "latest",
 		"@google/generative-ai": "latest",
@@ -76,7 +77,6 @@
 		"@cloudflare/vite-plugin": "1.7.5",
 		"@eslint/js": "9.29.0",
 		"@cloudflare/workers-types": "latest",
-		"@types/node": "^24.6.2",
 		"@types/react": "19.0.10",
 		"@types/react-dom": "19.0.4",
 		"@types/react-syntax-highlighter": "^15.5.13",
