@@ -1,5 +1,5 @@
 {
-	"name": "vite-react-template",
+	"name": "workerai",
 	"description": "A template for building a React application with Vite, Hono, and Cloudflare Workers",
 	"private": true,
 	"cloudflare": {
@@ -16,6 +16,7 @@
 		"@hookform/resolvers": "^5.2.2",
 		"@cloudflare/puppeteer": "latest",
 		"@cloudflare/ai-utils": "latest",
+		"@google/generative-ai": "latest",
 		"@radix-ui/react-accordion": "^1.2.12",
 		"@radix-ui/react-alert-dialog": "^1.1.15",
 		"@radix-ui/react-aspect-ratio": "^1.1.7",
