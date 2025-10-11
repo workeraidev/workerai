@@ -1,4 +1,3 @@
-// src/worker/index.ts
 import { Agent, routeAgentRequest } from 'agents';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
