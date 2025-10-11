@@ -1,617 +1,613 @@
-'use client';
-
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Code2, 
-  Image, 
-  Search, 
-  Camera, 
-  Palette, 
-  Terminal, 
-  Sparkles,
-  Send,
-  Plus,
-  X,
-  ChevronDown,
-  FileCode,
-  Zap,
-  Brain,
-  Cpu,
-  Globe,
-  Eye,
-  Copy,
-  Check,
-  Settings,
-  Maximize2,
-  Download,
-  Trash2
+// src/App.tsx
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  ArrowUpIcon,
+  CameraIcon,
+  FileIcon,
+  ImageIcon,
+  Settings2Icon,
+  CodeIcon,
+  SearchIcon,
+  MicIcon,
+  BotIcon,
+  UserIcon,
+  TrashIcon,
+  CopyIcon,
+  CheckIcon
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-// Cloudflare AI Models organized by category
-const AI_MODELS = {
-  'Text Generation': [
-    { id: '@cf/meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', description: 'Fast and efficient' },
-    { id: '@cf/meta/llama-3-8b-instruct', name: 'Llama 3 8B', description: 'Balanced performance' },
-    { id: '@cf/mistral/mistral-7b-instruct-v0.1', name: 'Mistral 7B', description: 'Efficient inference' },
-    { id: '@cf/qwen/qwen1.5-14b-chat-awq', name: 'Qwen 1.5 14B', description: 'Multilingual support' },
-  ],
-  'Code Generation': [
-    { id: '@hf/thebloke/deepseek-coder-6.7b-instruct-awq', name: 'DeepSeek Coder', description: 'Specialized for code' },
-    { id: '@hf/thebloke/codellama-7b-instruct-awq', name: 'CodeLlama 7B', description: 'Code-focused model' },
-  ],
-  'Image Generation': [
-    { id: '@cf/stabilityai/stable-diffusion-xl-base-1.0', name: 'SDXL Base', description: 'High quality images' },
-    { id: '@cf/lykon/dreamshaper-8-lcm', name: 'DreamShaper 8', description: 'Fast generation' },
-    { id: '@cf/bytedance/stable-diffusion-xl-lightning', name: 'SDXL Lightning', description: 'Ultra-fast' },
-  ],
-  'Vision': [
-    { id: '@cf/llava-hf/llava-1.5-7b-hf', name: 'LLaVA 1.5', description: 'Image understanding' },
-    { id: '@cf/unum/uform-gen2-qwen-500m', name: 'UForm Gen2', description: 'Vision-language' },
-  ],
-  'Embeddings': [
-    { id: '@cf/baai/bge-base-en-v1.5', name: 'BGE Base EN', description: 'Text embeddings' },
-    { id: '@cf/baai/bge-small-en-v1.5', name: 'BGE Small EN', description: 'Lightweight embeddings' },
-  ]
-};
-
-const TOOLS = [
-  { id: 'code', name: 'Code Canvas', icon: Code2, color: 'text-blue-500' },
-  { id: 'image', name: 'Image Gen', icon: Image, color: 'text-purple-500' },
-  { id: 'search', name: 'Web Search', icon: Search, color: 'text-green-500' },
-  { id: 'screenshot', name: 'Screenshot', icon: Camera, color: 'text-orange-500' },
-  { id: 'style', name: 'Style Editor', icon: Palette, color: 'text-pink-500' },
-  { id: 'terminal', name: 'Terminal', icon: Terminal, color: 'text-gray-500' },
-];
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  tool?: string;
-  toolOutput?: any;
-  timestamp: Date;
+  timestamp: number;
+  isStreaming?: boolean;
+  tools?: Array<{
+    name: string;
+    status: string;
+    result?: any;
+  }>;
 };
 
-type ToolState = {
-  active: string | null;
-  output: any;
+type Session = {
+  id: string;
+  title: string;
+  lastMessage?: Message;
+  messageCount: number;
 };
 
-export default function AICodeAgent() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'m your AI Code Agent powered by Cloudflare Workers AI. I can help you with code generation, image creation, web searches, and much more. What would you like to build today?',
-      timestamp: new Date(),
-    }
-  ]);
+const API_BASE = '/api';
+
+function App() {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedModel, setSelectedModel] = useState('@cf/meta/llama-3.1-8b-instruct');
-  const [selectedCategory, setSelectedCategory] = useState('Text Generation');
-  const [toolState, setToolState] = useState<ToolState>({ active: null, output: null });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [useTools, setUseTools] = useState(true);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string>('');
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const voiceWsRef = useRef<WebSocket | null>(null);
+
+  const models = [
+    { id: '@cf/meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B (Fast)' },
+    { id: '@cf/meta/llama-3.1-70b-instruct', name: 'Llama 3.1 70B (Smart)' },
+    { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', name: 'Llama 3.3 70B (Fastest)' },
+    { id: '@hf/nousresearch/hermes-2-pro-mistral-7b', name: 'Hermes 2 Pro' },
+    { id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b', name: 'DeepSeek R1' }
+  ];
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsAuthenticated(true);
+      loadSessions();
+      createNewSession();
     }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
-  const handleToolSelect = (toolId: string) => {
-    setToolState({ active: toolId, output: null });
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const simulateToolExecution = useCallback((tool: string, query: string) => {
-    switch (tool) {
-      case 'code':
-        return {
-          type: 'code',
-          language: 'javascript',
-          code: `// Generated with ${selectedModel}\nfunction example() {\n  console.log("Hello from AI Code Agent!");\n  return true;\n}\n\nexample();`
-        };
-      case 'image':
-        return {
-          type: 'image',
-          url: 'https://via.placeholder.com/512x512/667eea/ffffff?text=AI+Generated+Image',
-          prompt: query
-        };
-      case 'search':
-        return {
-          type: 'search',
-          results: [
-            { title: 'Result 1', url: 'https://example.com/1', snippet: 'Relevant information found...' },
-            { title: 'Result 2', url: 'https://example.com/2', snippet: 'More details here...' }
-          ]
-        };
-      case 'screenshot':
-        return {
-          type: 'screenshot',
-          url: 'https://via.placeholder.com/800x600/4338ca/ffffff?text=Screenshot+Captured',
-          timestamp: new Date().toISOString()
-        };
-      case 'style':
-        return {
-          type: 'style',
-          css: `/* AI-generated styles */\n.container {\n  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n  padding: 2rem;\n  border-radius: 1rem;\n}`
-        };
-      case 'terminal':
-        return {
-          type: 'terminal',
-          command: query,
-          output: '$ ' + query + '\n> Command executed successfully\n> Process completed with exit code 0'
-        };
-      default:
-        return null;
-    }
-  }, [selectedModel]);
-
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() || isProcessing) return;
+    const formData = new FormData(e.currentTarget);
+    const endpoint = authMode === 'login' ? 'login' : 'signup';
+    
+    try {
+      const response = await fetch(`${API_BASE}/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.get('email'),
+          password: formData.get('password'),
+          name: authMode === 'signup' ? formData.get('name') : undefined
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userId', data.userId);
+        setIsAuthenticated(true);
+        loadSessions();
+        createNewSession();
+      } else {
+        alert(data.error || 'Authentication failed');
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      alert('Authentication failed. Please try again.');
+    }
+  };
+
+  const loadSessions = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/sessions`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      setSessions(data.sessions || []);
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    }
+  };
+
+  const createNewSession = () => {
+    const newSessionId = `session-${Date.now()}`;
+    setSessionId(newSessionId);
+    setMessages([]);
+  };
+
+  const deleteSession = async (id: string) => {
+    try {
+      await fetch(`${API_BASE}/sessions/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      setSessions(sessions.filter(s => s.id !== id));
+      if (sessionId === id) {
+        createNewSession();
+      }
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+    }
+  };
+
+  const sendMessage = async (content: string) => {
+    if (!content.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `msg-${Date.now()}`,
       role: 'user',
-      content: input,
-      timestamp: new Date(),
+      content,
+      timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsProcessing(true);
+    setIsLoading(true);
 
-    // Simulate AI processing
-    setTimeout(() => {
-      const toolOutput = toolState.active ? simulateToolExecution(toolState.active, input) : null;
-      
+    try {
+      const response = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          message: content,
+          sessionId,
+          model: selectedModel,
+          useTools
+        })
+      });
+
+      const data = await response.json();
+
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `msg-${Date.now()}-assistant`,
         role: 'assistant',
-        content: toolState.active 
-          ? `I've processed your request using the ${TOOLS.find(t => t.id === toolState.active)?.name}. Here are the results:`
-          : `Based on your query using ${AI_MODELS[selectedCategory as keyof typeof AI_MODELS].find(m => m.id === selectedModel)?.name}, here's my response: ${input}`,
-        tool: toolState.active || undefined,
-        toolOutput,
-        timestamp: new Date(),
+        content: data.response,
+        timestamp: Date.now(),
+        tools: data.tools
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      setIsProcessing(false);
-      setToolState({ active: null, output: null });
-    }, 1500);
-  }, [input, isProcessing, toolState, selectedModel, selectedCategory, simulateToolExecution]);
-
-  const renderToolOutput = (tool: string, output: any, messageId: string) => {
-    switch (tool) {
-      case 'code':
-        return (
-          <Card className="mt-3">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileCode className="h-4 w-4" />
-                  <CardTitle className="text-sm">Code Output</CardTitle>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleCopy(output.code, `code-${messageId}`)}
-                >
-                  {copiedId === `code-${messageId}` ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
-                <code>{output.code}</code>
-              </pre>
-            </CardContent>
-          </Card>
-        );
-      case 'image':
-        return (
-          <Card className="mt-3">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                Generated Image
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <img src={output.url} alt={output.prompt} className="rounded-lg w-full" />
-              <p className="text-xs text-muted-foreground mt-2">Prompt: {output.prompt}</p>
-            </CardContent>
-          </Card>
-        );
-      case 'search':
-        return (
-          <Card className="mt-3">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Search Results
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {output.results.map((result: any, idx: number) => (
-                <div key={idx} className="border-l-2 border-primary pl-3">
-                  <a href={result.url} className="font-medium text-sm hover:underline" target="_blank" rel="noopener noreferrer">
-                    {result.title}
-                  </a>
-                  <p className="text-xs text-muted-foreground mt-1">{result.snippet}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        );
-      case 'screenshot':
-        return (
-          <Card className="mt-3">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Camera className="h-4 w-4" />
-                Screenshot Captured
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <img src={output.url} alt="Screenshot" className="rounded-lg w-full border" />
-              <p className="text-xs text-muted-foreground mt-2">Captured at: {new Date(output.timestamp).toLocaleString()}</p>
-            </CardContent>
-          </Card>
-        );
-      case 'style':
-        return (
-          <Card className="mt-3">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
-                  Style Output
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleCopy(output.css, `style-${messageId}`)}
-                >
-                  {copiedId === `style-${messageId}` ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
-                <code>{output.css}</code>
-              </pre>
-            </CardContent>
-          </Card>
-        );
-      case 'terminal':
-        return (
-          <Card className="mt-3 bg-slate-950 text-slate-50 border-slate-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Terminal className="h-4 w-4" />
-                Terminal Output
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-sm font-mono">
-                <code>{output.output}</code>
-              </pre>
-            </CardContent>
-          </Card>
-        );
-      default:
-        return null;
+    } catch (error) {
+      console.error('Send message error:', error);
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      {/* Sidebar */}
-      <div className={cn(
-        "border-r bg-white dark:bg-slate-950 transition-all duration-300 flex flex-col",
-        sidebarOpen ? "w-80" : "w-0 overflow-hidden"
-      )}>
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-sm">AI Code Agent</h2>
-                <p className="text-xs text-muted-foreground">Cloudflare AI</p>
-              </div>
-            </div>
+  const startVoiceMode = async () => {
+    try {
+      const ws = new WebSocket(
+        `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/voice/connect`
+      );
+
+      ws.onopen = () => {
+        console.log('Voice connection established');
+        setIsVoiceMode(true);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'UserStartedSpeaking') {
+          // Visual feedback
+        } else if (data.type === 'audio') {
+          // Play audio response
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('Voice WebSocket error:', error);
+        setIsVoiceMode(false);
+      };
+
+      ws.onclose = () => {
+        setIsVoiceMode(false);
+      };
+
+      voiceWsRef.current = ws;
+
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(event.data);
+        }
+      };
+
+      mediaRecorder.start(100); // Send chunks every 100ms
+    } catch (error) {
+      console.error('Voice mode error:', error);
+      alert('Failed to start voice mode. Please check microphone permissions.');
+    }
+  };
+
+  const stopVoiceMode = () => {
+    if (voiceWsRef.current) {
+      voiceWsRef.current.close();
+      voiceWsRef.current = null;
+    }
+    setIsVoiceMode(false);
+  };
+
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(''), 2000);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${API_BASE}/files/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setInput(prev => `${prev}\n[File uploaded: ${file.name}](${data.url})`);
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#faf9f5] dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-md">
+          <div className="flex items-center justify-center mb-6">
+            <BotIcon className="w-12 h-12 text-[#c96442]" />
           </div>
+          <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">
+            Cloudflare AI Code Agent
+          </h1>
+          <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
+            Your intelligent coding assistant
+          </p>
           
-          {/* Model Selection */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Model Category</label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(AI_MODELS).map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setAuthMode('login')}
+              className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                authMode === 'login'
+                  ? 'bg-[#c96442] text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setAuthMode('signup')}
+              className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                authMode === 'signup'
+                  ? 'bg-[#c96442] text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Sign Up
+            </button>
           </div>
 
-          <div className="space-y-2 mt-3">
-            <label className="text-xs font-medium text-muted-foreground">AI Model</label>
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AI_MODELS[selectedCategory as keyof typeof AI_MODELS]?.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{model.name}</span>
-                      <span className="text-xs text-muted-foreground">{model.description}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <form onSubmit={handleAuth} className="space-y-4">
+            {authMode === 'signup' && (
+              <input
+                type="text"
+                name="name"
+                placeholder="Full Name"
+                required
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#c96442] outline-none"
+              />
+            )}
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#c96442] outline-none"
+            />
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#c96442] outline-none"
+            />
+            <button
+              type="submit"
+              className="w-full bg-[#c96442] text-white py-3 rounded-lg font-medium hover:bg-[#b55538] transition-colors"
+            >
+              {authMode === 'login' ? 'Login' : 'Create Account'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-[#faf9f5] dark:bg-gray-900">
+      {/* Sidebar */}
+      <div className={`${showSidebar ? 'block' : 'hidden'} md:block w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col`}>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={createNewSession}
+            className="w-full bg-[#c96442] text-white py-2 rounded-lg font-medium hover:bg-[#b55538] transition-colors flex items-center justify-center gap-2"
+          >
+            <CodeIcon className="w-4 h-4" />
+            New Chat
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              className={`p-3 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group ${
+                sessionId === session.id ? 'bg-gray-100 dark:bg-gray-700' : ''
+              }`}
+              onClick={() => setSessionId(session.id)}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {session.title || 'New Chat'}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteSession(session.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <TrashIcon className="w-4 h-4 text-red-500" />
+                </button>
+              </div>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {session.messageCount} messages
+              </span>
+            </div>
+          ))}
         </div>
 
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Tools
-              </h3>
-              <div className="space-y-1">
-                {TOOLS.map((tool) => (
-                  <Button
-                    key={tool.id}
-                    variant={toolState.active === tool.id ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    size="sm"
-                    onClick={() => handleToolSelect(tool.id)}
-                  >
-                    <tool.icon className={cn("h-4 w-4 mr-2", tool.color)} />
-                    {tool.name}
-                    {toolState.active === tool.id && (
-                      <Badge variant="outline" className="ml-auto">Active</Badge>
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Brain className="h-4 w-4" />
-                Capabilities
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Cpu className="h-3 w-3" />
-                  Multi-model support
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Globe className="h-3 w-3" />
-                  Web-enabled search
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Eye className="h-3 w-3" />
-                  Vision understanding
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Code2 className="h-3 w-3" />
-                  Code generation
-                </div>
-              </div>
-            </div>
-          </div>
-        </ScrollArea>
-
-        <div className="p-4 border-t">
-          <Button variant="outline" size="sm" className="w-full">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('userId');
+              setIsAuthenticated(false);
+            }}
+            className="w-full text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="border-b bg-white dark:bg-slate-950 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                <ChevronDown className={cn(
-                  "h-4 w-4 transition-transform",
-                  sidebarOpen ? "rotate-90" : "-rotate-90"
-                )} />
-              </Button>
-              <div>
-                <h1 className="font-semibold text-lg">AI Code Agent</h1>
-                <p className="text-xs text-muted-foreground">
-                  {AI_MODELS[selectedCategory as keyof typeof AI_MODELS]?.find(m => m.id === selectedModel)?.name} • 
-                  {toolState.active ? ` ${TOOLS.find(t => t.id === toolState.active)?.name} Active` : ' Ready'}
-                </p>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                message.role === 'user'
+                  ? 'bg-[#c96442]'
+                  : 'bg-gray-200 dark:bg-gray-700'
+              }`}>
+                {message.role === 'user' ? (
+                  <UserIcon className="w-5 h-5 text-white" />
+                ) : (
+                  <BotIcon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                )}
+              </div>
+              
+              <div className={`flex-1 ${message.role === 'user' ? 'text-right' : ''}`}>
+                <div className={`inline-block max-w-3xl text-left ${
+                  message.role === 'user'
+                    ? 'bg-[#f0eee6] dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl px-4 py-3'
+                    : ''
+                }`}>
+                  {message.role === 'assistant' ? (
+                    <div className="prose dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          code({ node, inline, className, children, ...props }) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            const codeString = String(children).replace(/\n$/, '');
+                            
+                            return !inline && match ? (
+                              <div className="relative group">
+                                <button
+                                  onClick={() => copyCode(codeString)}
+                                  className="absolute right-2 top-2 p-2 bg-gray-700 hover:bg-gray-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  {copiedCode === codeString ? (
+                                    <CheckIcon className="w-4 h-4 text-green-400" />
+                                  ) : (
+                                    <CopyIcon className="w-4 h-4 text-gray-300" />
+                                  )}
+                                </button>
+                                <SyntaxHighlighter
+                                  style={vscDarkPlus}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  {...props}
+                                >
+                                  {codeString}
+                                </SyntaxHighlighter>
+                              </div>
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  )}
+                  
+                  {message.tools && (
+                    <div className="mt-2 space-y-1">
+                      {message.tools.map((tool, idx) => (
+                        <div key={idx} className="text-xs text-gray-500 dark:text-gray-400">
+                          🔧 {tool.name}: {tool.status}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="gap-1">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Online
-              </Badge>
-              <Button variant="ghost" size="sm">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+          ))}
+          
+          {isLoading && (
+            <div className="flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <BotIcon className="w-5 h-5 text-gray-700 dark:text-gray-300 animate-pulse" />
+              </div>
+              <div className="flex gap-1 items-center">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
             </div>
-          </div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Messages */}
-        <ScrollArea className="flex-1 p-6" ref={scrollRef}>
-          <div className="max-w-4xl mx-auto space-y-6">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-4",
-                  message.role === 'user' ? "justify-end" : "justify-start"
-                )}
-              >
-                {message.role === 'assistant' && (
-                  <Avatar className="h-8 w-8 border-2 border-purple-500">
-                    <AvatarImage src="" />
-                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white">
-                      AI
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div className={cn(
-                  "max-w-[80%] space-y-2",
-                  message.role === 'user' ? "items-end" : "items-start"
-                )}>
-                  <div className={cn(
-                    "rounded-2xl px-4 py-3",
-                    message.role === 'user' 
-                      ? "bg-gradient-to-br from-purple-500 to-blue-500 text-white" 
-                      : "bg-white dark:bg-slate-900 border"
-                  )}>
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                  {message.tool && message.toolOutput && renderToolOutput(message.tool, message.toolOutput, message.id)}
-                  <p className="text-xs text-muted-foreground px-2">
-                    {message.timestamp.toLocaleTimeString()}
-                  </p>
-                </div>
-                {message.role === 'user' && (
-                  <Avatar className="h-8 w-8 border-2 border-blue-500">
-                    <AvatarImage src="" />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
-                      U
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))}
-            {isProcessing && (
-              <div className="flex gap-4">
-                <Avatar className="h-8 w-8 border-2 border-purple-500">
-                  <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white">
-                    AI
-                  </AvatarFallback>
-                </Avatar>
-                <div className="bg-white dark:bg-slate-900 border rounded-2xl px-4 py-3">
-                  <div className="flex gap-1">
-                    <div className="h-2 w-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="h-2 w-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="h-2 w-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-
         {/* Input Area */}
-        <div className="border-t bg-white dark:bg-slate-950 p-4">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="max-w-4xl mx-auto">
-            {toolState.active && (
-              <div className="mb-3 flex items-center gap-2">
-                <Badge variant="secondary" className="gap-1">
-                  {TOOLS.find(t => t.id === toolState.active)?.icon && (
-                    <span>{TOOLS.find(t => t.id === toolState.active)!.icon({ className: 'h-3 w-3' })}</span>
-                  )}
-                  {TOOLS.find(t => t.id === toolState.active)?.name} Active
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setToolState({ active: null, output: null })}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-            <form onSubmit={handleSubmit} className="relative">
-              <Textarea
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4">
+              <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={toolState.active 
-                  ? `Enter ${TOOLS.find(t => t.id === toolState.active)?.name} parameters...`
-                  : "Ask anything or describe what you want to build..."
-                }
-                className="min-h-[100px] pr-24 resize-none rounded-2xl"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleSubmit(e);
+                    sendMessage(input);
                   }
                 }}
+                placeholder="Ask me to write Cloudflare Workers code..."
+                className="w-full bg-transparent text-gray-900 dark:text-white outline-none resize-none"
+                rows={3}
+                disabled={isLoading}
               />
-              <div className="absolute bottom-3 right-3 flex gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={!input.trim() || isProcessing}
-                  className="h-8 w-8 p-0 bg-gradient-to-br from-purple-500 to-blue-500"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+              
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <input
+                      type="file"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      accept="image/*,.pdf,.txt,.md,.js,.ts,.tsx,.jsx,.json"
+                    />
+                    <FileIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  </label>
+                  
+                  <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <ImageIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  </button>
+                  
+                  <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <CameraIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  </button>
+                  
+                  <button
+                    onClick={isVoiceMode ? stopVoiceMode : startVoiceMode}
+                    className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+                      isVoiceMode ? 'bg-red-100 dark:bg-red-900' : ''
+                    }`}
+                  >
+                    <MicIcon className={`w-5 h-5 ${
+                      isVoiceMode ? 'text-red-600' : 'text-gray-600 dark:text-gray-400'
+                    }`} />
+                  </button>
+                  
+                  <button
+                    onClick={() => setUseTools(!useTools)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      useTools
+                        ? 'bg-[#c96442] text-white'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}
+                    title={useTools ? 'Tools enabled' : 'Tools disabled'}
+                  >
+                    <Settings2Icon className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#c96442] outline-none"
+                  >
+                    {models.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => sendMessage(input)}
+                    disabled={!input.trim() || isLoading}
+                    className="bg-[#c96442] text-white p-3 rounded-lg hover:bg-[#b55538] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ArrowUpIcon className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
-            </form>
-            <p className="text-xs text-center text-muted-foreground mt-3">
-              Powered by Cloudflare Workers AI • {messages.length} messages
-            </p>
+            </div>
           </div>
         </div>
       </div>
@@ -619,4 +615,4 @@ export default function AICodeAgent() {
   );
 }
 
-export default AICodeAgent;
+export default App;
